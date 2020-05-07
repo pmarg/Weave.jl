@@ -90,10 +90,10 @@ function Base.display(report::Report, m::MIME"application/pdf", data)
     figname = add_figure(report, data, m, ".pdf")
 end
 
-#Text is written to stdout, called from "term" mode chunks
+# Text is written to stdout, called from "term" mode chunks
 function Base.display(report::Report, m::MIME"text/plain", data)
     io = PipeBuffer()
-    show(IOContext(io, :limit => true), m, data)
+    show(IOContext(io, :limit => true, :color => true), m, data)
     flush(io)
     s = read(io, String)
     close(io)
@@ -114,13 +114,14 @@ function Base.show(io, m::MIME"text/html", data::Exception)
     println(io, "</pre>")
 end
 
-#Catch "rich_output"
+# Catch "rich_output"
 function Base.display(report::Report, m::MIME"text/html", data)
-    s = repr(m, data)
-    report.rich_output *= "\n" * s
+    io = IOBuffer()
+    show(IOContext(io, :limit => true, :color => true), m, data)
+    report.rich_output *= "\n" * String(take!(io))
 end
 
-#Catch "rich_output"
+# Catch "rich_output"
 function Base.display(report::Report, m::MIME"text/markdown", data)
     s = repr(m, data)
     # Convert to "richer" type of possible
