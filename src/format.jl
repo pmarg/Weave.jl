@@ -1,11 +1,9 @@
-import Mustache, Highlights
-import .WeaveMarkdown
-using Dates
-using Markdown
+using Mustache, Highlights
+using .WeaveMarkdown, Markdown, Dates
 using REPL.REPLCompletions: latex_symbols
 
 function format(doc::WeaveDoc)
-    formatted = AbstractString[]
+    formatted = String[]
     docformat = doc.format
 
     # Complete format dictionaries with defaults
@@ -29,19 +27,12 @@ function format(doc::WeaveDoc)
 
     formatted = join(formatted, "\n")
     # Render using a template if needed
-    rendered = render_doc(formatted, doc, doc.format)
-
-    return rendered
+    return render_doc(formatted, doc)
 end
 
-"""
-  render_doc(formatted::AbstractString, format)
+render_doc(formatted, doc) = render_doc(formatted, doc, doc.format)
 
-Render formatted document to a template
-"""
-function render_doc(formatted, doc::WeaveDoc, format)
-    return formatted
-end
+render_doc(formatted, doc, format) = formatted
 
 function highlight(
     mime::MIME,
@@ -56,7 +47,7 @@ function stylesheet(m::MIME, theme)
     return sprint((io, x) -> Highlights.stylesheet(io, m, x), theme)
 end
 
-function render_doc(formatted, doc::WeaveDoc, format::JMarkdown2HTML)
+function render_doc(formatted, doc, format::JMarkdown2HTML)
     css = stylesheet(MIME("text/html"), doc.highlight_theme)
     path, wsource = splitdir(abspath(doc.source))
     # wversion = string(Pkg.installed("Weave"))
@@ -94,7 +85,7 @@ function render_doc(formatted, doc::WeaveDoc, format::JMarkdown2HTML)
     )
 end
 
-function render_doc(formatted, doc::WeaveDoc, format::JMarkdown2tex)
+function render_doc(formatted, doc, format::JMarkdown2tex)
     highlight = stylesheet(MIME("text/latex"), doc.highlight_theme)
     path, wsource = splitdir(abspath(doc.source))
     # wversion = string(Pkg.installed("Weave"))
@@ -120,13 +111,14 @@ function render_doc(formatted, doc::WeaveDoc, format::JMarkdown2tex)
     )
 end
 
-strip_header!(doc::WeaveDoc) = strip_header!(doc.chunks[1], doc.doctype)
+strip_header!(doc) = strip_header!(doc.chunks[1], doc.doctype)
+strip_header!(codechunk::CodeChunk, doctype) = return
 function strip_header!(docchunk::DocChunk, doctype)
     doctype == "pandoc" && return
     content = docchunk.content[1].content
     if (m = match(HEADER_REGEX, content)) !== nothing
         # TODO: is there other format where we want to keep headers ?
-        docchunk.content[1].content = if doctype != "github"
+        docchunk.content[1].content = if doctype ≠ "github"
             lstrip(replace(content, HEADER_REGEX => ""))
         else
             # only strips Weave headers
@@ -140,7 +132,6 @@ function strip_header!(docchunk::DocChunk, doctype)
         end
     end
 end
-strip_header!(codechunk::CodeChunk, doctype) = return
 
 function format_chunk(chunk::DocChunk, formatdict, docformat)
     return join([format_inline(c) for c in chunk.content], "")

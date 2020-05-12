@@ -196,7 +196,7 @@ function weave(
     end
 
     doc.cwd == pwd() && (outname = basename(outname))
-    @info("Report weaved to $outname")
+    @info "Report weaved to $outname"
     return abspath(outname)
 end
 
